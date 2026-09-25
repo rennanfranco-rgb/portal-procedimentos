@@ -285,7 +285,7 @@ function renderCategories() {
       // Só monta o iframe quando a categoria está aberta.
       body = isOpen ? `<div class="folder-frame-wrap">
         <div class="folder-loading"><div class="spinner"></div></div>
-        <iframe class="folder-frame" title="${s.label}" sandbox="allow-scripts allow-same-origin"
+        <iframe class="folder-frame" title="${s.label}"
           src="https://drive.google.com/embeddedfolderview?id=${folderId}#${viewMode}"
           onload="this.previousElementSibling.style.display='none'"></iframe>
       </div>` : '';
