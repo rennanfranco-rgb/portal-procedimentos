@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal de Procedimentos | Sistema de Gestão Integrada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #007782;
+    --primary-dark: #004d55;
+    --accent: #A0D228;
+    --accent-dark: #7fa81f;
+    --sky: #9AEFE9;
+    --bg: #F1F5F4;
+    --surface: #FFFFFF;
+    --text: #0F2C2E;
+    --text-muted: #5B6E6D;
+    --border: #DCE6E4;
+    --radius: 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  /* A página ocupa exatamente a caixa do Google Sites.
+     Só a lista de categorias rola, então qualquer altura de caixa funciona. */
+  html, body { height: 100%; background: var(--bg); overflow: hidden; }
+  body, input, button { font-family: 'Poppins', -apple-system, 'Segoe UI', sans-serif; }
+  body { color: var(--text); display: flex; flex-direction: column; }
+  .mono { font-family: 'IBM Plex Mono', 'Consolas', monospace; }
+  button:focus-visible, .category-head:focus-visible, [data-doc]:focus-visible, a:focus-visible {
+    outline: 2px solid var(--primary); outline-offset: 2px;
+  }
+
+  /* ---------- Banner ---------- */
+  .banner {
+    flex-shrink: 0;
+    background: linear-gradient(120deg, var(--primary-dark), var(--primary) 65%);
+    color: white; padding: 1.4rem 1.5rem 2.4rem;
+  }
+  .banner-eyebrow { color: var(--sky); font-size: 0.8rem; margin-bottom: 0.2rem; }
+  .banner h1 { font-size: 1.6rem; font-weight: 700; }
+
+  /* ---------- Barra de busca ---------- */
+  .toolbar-wrap { flex-shrink: 0; padding: 0 1.5rem; margin-top: -1.4rem; }
+  .toolbar {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0.8rem 1rem; display: flex; gap: 1rem; align-items: center;
+    box-shadow: 0 8px 22px rgba(15,44,46,0.06);
+  }
+  .search-field {
+    flex: 1; display: flex; align-items: center; gap: 0.6rem;
+    border: 1px solid var(--border); border-radius: 999px; padding: 0.5rem 1rem; background: var(--bg);
+  }
+  .search-field svg { flex-shrink: 0; color: var(--text-muted); }
+  .search-field input { border: none; outline: none; background: none; width: 100%; font-size: 0.9rem; color: var(--text); }
+  .view-toggle { display: flex; gap: 4px; background: var(--bg); border-radius: 999px; padding: 4px; }
+  .view-toggle button {
+    border: none; background: none; width: 34px; height: 30px; border-radius: 999px;
+    cursor: pointer; color: var(--text-muted);
+  }
+  .view-toggle button.active { background: var(--primary); color: white; }
+
+  /* ---------- Área rolável ---------- */
+  .content { flex: 1; min-height: 0; overflow-y: auto; padding: 1.2rem 1.5rem 1.5rem; }
+
+  /* ---------- Categorias ---------- */
+  .category {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    margin-bottom: 0.7rem; overflow: hidden;
+  }
+  .category-head {
+    display: flex; align-items: center; gap: 0.85rem; padding: 0.95rem 1.15rem;
+    cursor: pointer; user-select: none;
+  }
+  .category-head:hover { background: rgba(0,119,130,0.04); }
+  .category-icon {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    background: rgba(0,119,130,0.1); color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .category-title { flex: 1; font-size: 0.95rem; font-weight: 600; }
+  .category-count {
+    font-size: 0.75rem; color: var(--text-muted); background: var(--bg);
+    padding: 2px 10px; border-radius: 999px; font-family: 'IBM Plex Mono', monospace;
+  }
+  .chevron { transition: transform 0.18s ease; color: var(--text-muted); }
+  .category.open .chevron { transform: rotate(90deg); color: var(--primary); }
+  .category-body { display: none; padding: 0 1.15rem 1.1rem; }
+  .category.open .category-body { display: block; }
+
+  .empty-state { text-align: center; padding: 1.6rem; color: var(--text-muted); font-size: 0.86rem; }
+  .folder-link {
+    display: inline-block; margin-top: 0.8rem; font-size: 0.8rem;
+    color: var(--primary); font-weight: 600; text-decoration: none;
+  }
+  .folder-link:hover { text-decoration: underline; }
+  .folder-frame {
+    width: 100%; height: 420px; border: 1px solid var(--border);
+    border-radius: 8px; margin-top: 0.55rem; background: white;
+  }
+
+  /* lista */
+  .doc-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    padding: 0.75rem 0.85rem; border: 1px solid var(--border); border-radius: 8px;
+    margin-top: 0.55rem; cursor: pointer;
+  }
+  .doc-row:hover, .doc-card:hover { border-color: var(--primary); background: var(--bg); }
+  .doc-code {
+    font-size: 0.68rem; color: var(--primary); background: rgba(0,119,130,0.08);
+    padding: 1px 7px; border-radius: 4px; display: inline-block; margin-bottom: 4px;
+  }
+  .doc-title { font-size: 0.9rem; font-weight: 600; }
+  .doc-meta { font-size: 0.76rem; color: var(--text-muted); }
+  .doc-open { font-size: 0.78rem; color: var(--primary); font-weight: 600; white-space: nowrap; }
+
+  /* grade */
+  .doc-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+    gap: 0.7rem; margin-top: 0.55rem;
+  }
+  .doc-card {
+    border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem;
+    cursor: pointer; display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  .doc-card-icon {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: rgba(160,210,40,0.18); color: var(--accent-dark);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------- Leitor (cobre toda a caixa incorporada) ---------- */
+  .viewer {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: #3d4547; flex-direction: column;
+  }
+  .viewer.open { display: flex; }
+  .viewer-header {
+    background: var(--primary-dark); color: white; padding: 0.75rem 1.25rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  }
+  .viewer-header h3 { font-size: 0.95rem; font-weight: 600; }
+  .back-btn {
+    background: rgba(255,255,255,0.14); border: none; color: white;
+    font-size: 0.82rem; padding: 6px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  }
+  .back-btn:hover { background: rgba(255,255,255,0.24); }
+  .viewer-body { position: relative; flex: 1; }
+  .viewer-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: white; }
+  .watermark {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+    display: flex; flex-wrap: wrap; align-content: space-around; justify-content: space-around; opacity: 0.13;
+  }
+  .watermark span { transform: rotate(-30deg); font-size: 0.85rem; color: #004d55; white-space: nowrap; }
+
+  @media (max-width: 720px) {
+    .banner, .toolbar-wrap, .content { padding-left: 1rem; padding-right: 1rem; }
+    .banner h1 { font-size: 1.35rem; }
+    .folder-frame { height: 340px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <div class="banner-eyebrow">Sistema de Gestão Integrada</div>
+  <h1>Portal de Procedimentos</h1>
+</div>
+
+<div class="toolbar-wrap">
+  <div class="toolbar">
+    <div class="search-field">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="Buscar por nome ou código..." aria-label="Buscar documento">
+    </div>
+    <div class="view-toggle">
+      <button id="gridBtn" class="active" title="Ver em grade" aria-label="Ver em grade">▦</button>
+      <button id="listBtn" title="Ver em lista" aria-label="Ver em lista">☰</button>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div id="categories"></div>
+</div>
+
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-labelledby="viewerTitle">
+  <div class="viewer-header">
+    <h3 id="viewerTitle">Documento</h3>
+    <button class="back-btn" id="closeBtn">‹ Fechar leitura</button>
+  </div>
+  <div class="viewer-body">
+    <iframe id="viewerFrame" title="Documento" allow="autoplay"></iframe>
+    <div class="watermark" id="watermark"></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO — só é preciso mexer aqui.
+
+   SECTORS: uma entrada por pasta do Google Drive.
+     folder: cole o link da pasta (ex.: https://drive.google.com/drive/folders/1AbC...)
+             Categorias SEM documentos cadastrados abaixo mostram a pasta
+             inteira embutida, atualizada automaticamente pelo Drive.
+
+   DOCS: opcional. Cadastre aqui os arquivos que devem aparecer como cartões
+         (com código, revisão e busca) e abrir no leitor do portal.
+     link: cole o link de compartilhamento do arquivo
+           (ex.: https://drive.google.com/file/d/1XyZ.../view?usp=sharing)
+   ===================================================================== */
+
+const SECTORS = [
+  { id: "sso",          label: "Saúde e Segurança - SSO",      folder: "12nB5T-M9ekkB6aGOOtd0eU3SVHtfaZ2X" },
+  { id: "sustent",      label: "Relatório de Sustentabilidade", folder: "1aphIUv7a_BVxfNAGQilVKjPIEc7H3iix" },
+  { id: "sgq",          label: "Qualidade - SGQ",              folder: "1Ktl1bTDt7nriKL7JfgZxHsYLBD9cKfPf" },
+  { id: "avisos",       label: "Programações & Avisos",        folder: "1XLfaM21KJToIBGnGp0-_-C6Dj62UHfaJ" },
+  { id: "sga",          label: "Meio Ambiente - SGA",          folder: "13OVVDenh9rxEzOhUUpa_sKW7K-CMhkbE" },
+  { id: "licencas",     label: "Licenças",                     folder: "1ReFGKNE0hud5-F56zNTIdF-7t5oxwWE9" },
+  { id: "mudanca",      label: "Gestão de Mudança",            folder: "1o1f9vDLR8aSfIkh_A6Z6jVunXj6KhLoE" },
+  { id: "melhoria",     label: "Gestão de Melhoria",           folder: "1SKOeqJCHRSGE6M7LsLOee_sBrXqc3p4-" },
+  { id: "certificados", label: "Certificados",                 folder: "1_czyz1F3RUx5ffgwlP8PTJi6a4qGJyfj" },
+];
+
+const DOCS = [
+  { code: "PRO-001", title: "Inspeção Preventiva em Aerogeradores", sector: "sso",
+    rev: "04", date: "15/01/2026", link: "" },
+  { code: "PRO-002", title: "Manutenção em Subestações Elétricas", sector: "sso",
+    rev: "02", date: "10/02/2026", link: "" },
+  { code: "PRO-010", title: "Diretrizes de Segurança para Trabalho em Altura (NR-35)", sector: "sso",
+    rev: "05", date: "20/02/2026", link: "" },
+  { code: "PRO-020", title: "Gestão de Resíduos Sólidos", sector: "sga",
+    rev: "01", date: "05/03/2026", link: "" },
+  { code: "REL-2025", title: "Relatório de Sustentabilidade 2025", sector: "sustent",
+    rev: "01", date: "15/06/2026", link: "" },
+];
+
+/* ===================================================================== */
+
+// Aceita link completo ou só o ID
+function driveId(value) {
+  if (!value) return "";
+  const m = value.match(/\/d\/([\w-]+)/) || value.match(/folders\/([\w-]+)/) || value.match(/[?&]id=([\w-]+)/);
+  return m ? m[1] : value.trim();
+}
+
+let openCategories = new Set();
+let viewMode = 'grid';
+
+const getTerm = () => document.getElementById('searchInput').value.trim().toLowerCase();
+
+function docsForSector(sectorId, term) {
+  return DOCS.filter(d => d.sector === sectorId &&
+    (!term || d.title.toLowerCase().includes(term) || d.code.toLowerCase().includes(term)));
+}
+
+const folderIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>`;
+
+function renderCategories() {
+  const term = getTerm();
+  const wrap = document.getElementById('categories');
+
+  wrap.innerHTML = SECTORS.map(s => {
+    const all = docsForSector(s.id, '');
+    const matches = docsForSector(s.id, term);
+    const folderId = driveId(s.folder);
+
+    // Na busca, esconde categorias sem resultado
+    if (term && matches.length === 0) return '';
+
+    const isOpen = openCategories.has(s.id) || (term && matches.length > 0);
+    let body;
+    if (all.length) {
+      body = viewMode === 'grid' ? renderGrid(matches) : renderList(matches);
+      if (folderId) body += `<a class="folder-link" target="_blank" rel="noopener"
+        href="https://drive.google.com/drive/folders/${folderId}">Ver pasta completa no Drive ›</a>`;
+    } else if (folderId) {
+      // Só monta o iframe quando a categoria está aberta
+      body = isOpen ? `<iframe class="folder-frame" title="${s.label}"
+        src="https://drive.google.com/embeddedfolderview?id=${folderId}#${viewMode}"></iframe>` : '';
+    } else {
+      body = `<div class="empty-state">Nenhum documento publicado nesta categoria ainda.</div>`;
+    }
+
+    const count = all.length ? matches.length : (folderId ? 'pasta' : 0);
+
+    return `
+      <div class="category ${isOpen ? 'open' : ''}">
+        <div class="category-head" tabindex="0" role="button" aria-expanded="${isOpen}" data-toggle="${s.id}">
+          <span class="category-icon">${folderIcon}</span>
+          <span class="category-title">${s.label}</span>
+          <span class="category-count">${count}</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="category-body">${body}</div>
+      </div>`;
+  }).join('') || `<div class="empty-state">Nenhum documento encontrado para “${term}”.</div>`;
+
+  wrap.querySelectorAll('.category-head').forEach(head => {
+    head.addEventListener('click', () => toggleCategory(head.dataset.toggle));
+    head.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCategory(head.dataset.toggle); }
+    });
+  });
+  wrap.querySelectorAll('[data-doc]').forEach(el => {
+    const open = () => {
+      const doc = DOCS[Number(el.dataset.doc)];
+      openViewer(`${doc.code} — ${doc.title}`, doc.link);
+    };
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') open(); });
+  });
+}
+
+function renderList(docs) {
+  return `<div>` + docs.map(d => `
+    <div class="doc-row" tabindex="0" data-doc="${DOCS.indexOf(d)}">
+      <div>
+        <span class="doc-code mono">${d.code}</span>
+        <div class="doc-title">${d.title}</div>
+        <div class="doc-meta">Rev. ${d.rev}, atualizado em ${d.date}</div>
+      </div>
+      <span class="doc-open">Ler ›</span>
+    </div>`).join('') + `</div>`;
+}
+
+function renderGrid(docs) {
+  return `<div class="doc-grid">` + docs.map(d => `
+    <div class="doc-card" tabindex="0" data-doc="${DOCS.indexOf(d)}">
+      <div class="doc-card-icon">📄</div>
+      <span class="doc-code mono">${d.code}</span>
+      <div class="doc-title">${d.title}</div>
+      <div class="doc-meta">Rev. ${d.rev}, ${d.date}</div>
+    </div>`).join('') + `</div>`;
+}
+
+function toggleCategory(id) {
+  openCategories.has(id) ? openCategories.delete(id) : openCategories.add(id);
+  renderCategories();
+}
+
+function setView(mode) {
+  viewMode = mode;
+  document.getElementById('gridBtn').classList.toggle('active', mode === 'grid');
+  document.getElementById('listBtn').classList.toggle('active', mode === 'list');
+  renderCategories();
+}
+
+/* ---------- Leitor ---------- */
+function openViewer(title, link) {
+  const id = driveId(link);
+  if (!id) { alert('Este documento ainda não tem link do Google Drive cadastrado.'); return; }
+  document.getElementById('viewerTitle').textContent = title;
+  document.getElementById('viewerFrame').src = `https://drive.google.com/file/d/${id}/preview`;
+  buildWatermark();
+  document.getElementById('viewer').classList.add('open');
+  document.getElementById('closeBtn').focus();
+}
+
+function closeViewer() {
+  document.getElementById('viewer').classList.remove('open');
+  document.getElementById('viewerFrame').src = 'about:blank';
+}
+
+function buildWatermark() {
+  const label = 'CASA DOS VENTOS · CONSULTA ONLINE · ' + new Date().toLocaleDateString('pt-BR');
+  document.getElementById('watermark').innerHTML =
+    Array.from({ length: 24 }).map(() => `<span>${label}</span>`).join('');
+}
+
+document.getElementById('searchInput').addEventListener('input', renderCategories);
+document.getElementById('gridBtn').addEventListener('click', () => setView('grid'));
+document.getElementById('listBtn').addEventListener('click', () => setView('list'));
+document.getElementById('closeBtn').addEventListener('click', closeViewer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewer(); });
+
+renderCategories();
+</script>
+</body>
+</html>
